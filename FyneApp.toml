@@ -2,7 +2,7 @@
 Icon = "Icon.png"
 Name = "Fyne Demo"
 ID = "io.fyne.demo"
-Version = "2.80"
+Version = "2.8.0"
 Build = 34
 
 [Development]
