@@ -7,12 +7,14 @@
 
     <application
         android:label="Fyne Demo"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:debuggable="true">
 
         <activity
             android:name="org.golang.app.GoNativeActivity"
             android:exported="true"
-            android:configChanges="0x2a0"
+            android:configChanges="orientation|keyboardHidden|uiMode"
             android:label="Fyne Demo">
 
             <meta-data

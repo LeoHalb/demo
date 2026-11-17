@@ -8,13 +8,22 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/driver/mobile"
 	"fyne.io/fyne/v2/widget"
 )
 
 var timestamp time.Time
 var stoppedTime time.Duration
 
-func foregroundServiceScreen(_ fyne.Window) fyne.CanvasObject {
+func foregroundServiceScreen(w fyne.Window) fyne.CanvasObject {
+	// Foreground services are an optional capability of the app, so ask for
+	// it rather than assuming it is there.
+	service, ok := fyne.CurrentApp().(mobile.ForegroundService)
+	if !ok {
+		return widget.NewLabel("Foreground services are not supported on this platform")
+	}
+
 	label := widget.NewLabel("0s")
 	currentlyRunning := isRunning()
 
@@ -31,7 +40,9 @@ func foregroundServiceScreen(_ fyne.Window) fyne.CanvasObject {
 				// Repeated starts update the existing service notification;
 				// the object churn stays on the Java side where the GC owns
 				// it, so this is safe to call once a second.
-				fyne.CurrentApp().StartForegroundService("Demo Clock", elapsedTime)
+				if err := service.StartForegroundService("Demo Clock", elapsedTime); err != nil {
+					log.Println("update foreground service:", err)
+				}
 			}
 			<-ticker.C
 		}
@@ -39,10 +50,15 @@ func foregroundServiceScreen(_ fyne.Window) fyne.CanvasObject {
 
 	button := widget.NewButton("Start", nil)
 	button.OnTapped = func() {
-		fyne.CurrentApp().RequestNotificationPermission()
+		if perm, ok := fyne.CurrentApp().(mobile.NotificationPermission); ok {
+			perm.RequestNotificationPermission()
+		}
 
 		if !currentlyRunning {
-			fyne.CurrentApp().StartForegroundService("Demo Clock", "0s")
+			if err := service.StartForegroundService("Demo Clock", "0s"); err != nil {
+				dialog.ShowError(err, w)
+				return
+			}
 
 			ticker.Reset(time.Second)
 			start(time.Now().Unix())
@@ -53,7 +69,7 @@ func foregroundServiceScreen(_ fyne.Window) fyne.CanvasObject {
 				button.Refresh()
 			})
 		} else {
-			fyne.CurrentApp().StopForegroundService()
+			service.StopForegroundService()
 
 			ticker.Stop()
 			elapsedTime := stop()
